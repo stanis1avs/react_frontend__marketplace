@@ -1,15 +1,23 @@
-import { useEffect } from 'react';
 import { useSelector, useDispatch } from "react-redux";
 import Link from 'next/link'
-import { cartAdd, cartDelete } from "../Reducers/ReducerCart";
+import { cartDelete } from "../Reducers/ReducerCart";
+import { deleteFromDbCart } from "../Actions/ActionCart";
 
 export default function CartItems() {
   const { items, total } = useSelector(state => state.ReducerCart);
+  const token = useSelector(state => state.ReducerAuth?.token);
   const dispatch = useDispatch()
 
-  const handlerRemove = (id) => {
-    dispatch(cartDelete(id))
+  const handlerRemove = (index) => {
+    const item = items[index];
+    if (token && item.dbItemId) {
+      // Sync deletion to DB cart; DB response updates Redux via syncCart
+      dispatch(deleteFromDbCart(item.dbItemId))
+    } else {
+      dispatch(cartDelete(index))
+    }
   }
+
   return (
     <>
       {items &&
@@ -30,7 +38,7 @@ export default function CartItems() {
               </thead>
               <tbody>
                 {items.map((item, index) =>
-                  <tr key={item.id}>
+                  <tr key={`${item.id}-${item.size}-${index}`}>
                     <td scope="row">{index+1}</td>
                     <td><Link href={`/catalog/${item.id}`}>{item.title}</Link></td>
                     <td>{item.size}</td>
