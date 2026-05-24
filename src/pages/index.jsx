@@ -1,5 +1,6 @@
 import CatalogWidget from '@/Components/CatalogWidget'
 import TopSalesWidget from '@/Components/TopSalesWidget'
+import RecommendationsWidget from '@/Components/RecommendationsWidget'
 import Head from 'next/head'
 
 export async function getStaticProps () {
@@ -27,6 +28,7 @@ export default function Main({items}) {
         <meta name="verify-admitad" content="7392481a26" />
       </Head>
       <TopSalesWidget/>
+      <RecommendationsWidget/>
       <CatalogWidget items={items}/>
     </>
   )

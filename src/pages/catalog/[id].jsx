@@ -3,7 +3,10 @@ import { useRouter } from 'next/navigation'
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCatalogId } from "@/Actions/ActionCatalogId";
 import { cartAdd } from "@/Reducers/ReducerCart";
+import { addToDbCart } from "@/Actions/ActionCart";
 import Loader from "@/pages/Loader";
+
+const API = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
 export async function getServerSideProps({ params }) {
   const { id } = params;
@@ -15,7 +18,8 @@ export async function getServerSideProps({ params }) {
 export default function CatalogId({ id }) {
   const dispatch = useDispatch();
   const router = useRouter()
-  const { item, loading, error, countSizes} = useSelector(state => state.ReducerCatalogId)
+  const { item, loading, error, countSizes } = useSelector(state => state.ReducerCatalogId)
+  const token = useSelector((state) => state.ReducerAuth?.token)
 
   const [size, setSize] = useState(null);
   const [count, setCount] = useState(0);
@@ -26,26 +30,43 @@ export default function CatalogId({ id }) {
 
   const handlerClickCount = (x) => {
     let sizeCopy = count + x;
-    if (sizeCopy > 10) sizeCopy = 10 ;
-    if (sizeCopy < 0) sizeCopy = 0 ;
+    if (sizeCopy > 10) sizeCopy = 10;
+    if (sizeCopy < 0) sizeCopy = 0;
     setCount(sizeCopy)
   }
 
   const handlerClickCart = () => {
+    const selectedSize = item.sizes[size].size;
     const toCard = {
       id: item.id,
       title: item.title,
-      size:  item.sizes[size].size,
+      size: selectedSize,
       count: count,
       price: item.price,
       result: count * item.price
     }
+    // Always update local Redux cart
     dispatch(cartAdd(toCard))
+    // If logged in, sync to DB cart (creates UserInteraction automatically)
+    if (token) {
+      dispatch(addToDbCart({ productId: item.id, size: selectedSize, count }))
+    }
     router.push('/cart')
   }
 
   useEffect(() => {
     dispatch(fetchCatalogId(id))
+    // Log view interaction if authenticated
+    if (token) {
+      fetch(`${API}/api/interactions/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ product_id: Number(id), event_type: 'view' }),
+      }).catch(() => {})
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, id]);
 
